@@ -2,7 +2,7 @@ package com.mycompany.movierater;
 
 /**
  *
- * @author agnes
+ * @author agnesaaaa
  */
 public class MovieRater {
 
