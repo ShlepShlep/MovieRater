@@ -16,30 +16,35 @@ public class Movie {
         
     }
     
-    public String returnTitle() {
+    public String getTitle() {
         return title;
     }
     
-    public String returnImdbID() {
+    public String getImdbID() {
         return imdbID;
     }
     
-    public int returnYear() {
+    public int getYear() {
         return year;
     }
     
-    public double returnRating() {
+    public double getRating() {
         return rating;
     }
     
-    public String returnType() {
+    public String getType() {
         return type;
     }
     
-    public String[] returnGenres() {
+    public String[] getGenres() {
         if (genresString == null || genresString.isEmpty()) {
             return new String[0];
         }
-        return genresString.split(",");
+        return genresString.split(",");//splits the string into an array of genres
+    }
+    
+    @Override //using this because stupid JList prints bullshit otherwise, this overrites the toString function, and if we call our object in a print or wtv we need a string, this will get called
+    public String toString() {
+        return getTitle();
     }
 }
