@@ -1,6 +1,8 @@
 package com.mycompany.movierater;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import javax.swing.ImageIcon;
 
 
 @JsonIgnoreProperties(ignoreUnknown = true) //ignores "votes" because we dont use it
@@ -11,6 +13,16 @@ public class Movie {
     @JsonProperty("year") private int year;
     @JsonProperty("rating") private double rating;
     @JsonProperty("genres") String genresString;
+    @JsonIgnore ImageIcon poster;
+    
+    public ImageIcon getPoster() {
+        return poster;
+    }
+    
+    public void setPoster(ImageIcon poster){
+        this.poster = poster;
+    }
+    
     
     public Movie() {
         
