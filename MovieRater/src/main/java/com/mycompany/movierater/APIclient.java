@@ -36,7 +36,7 @@ public class APIclient {
                 return movieJson;
             }
             
-        } catch (Exception error){
+        } catch (Exception e){
             System.out.println("Error during fetching a response from the API");
             return null;
         }

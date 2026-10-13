@@ -26,6 +26,10 @@ public class AppUI extends javax.swing.JFrame {
     public AppUI(Movie[] movieDatabase) { //CONSTRUCTORRRRRR
         this.movieDatabase = movieDatabase; //gets the filled database
         initComponents();
+        ratedMovies.setLayoutOrientation(JList.HORIZONTAL_WRAP);
+        ratedMovies.setVisibleRowCount(-1);
+        ratedMovies.setFixedCellWidth(130);
+        ratedMovies.setFixedCellHeight(200);
         ratedMovies.setCellRenderer(new MovieListRenderer());
         jScrollPane1.setViewportView(ratedMovies); //shows the list :0
         
@@ -75,7 +79,10 @@ public class AppUI extends javax.swing.JFrame {
             protected void done() {
                 try {
                     movie.setPoster(get());
-                    ratedMovies.repaint();
+                    int index = ratedListModel.indexOf(movie);
+                    if (index >= 0) {
+                        ratedListModel.set(index, movie);
+                    }
                 } catch (Exception e){
                     System.out.println("Could not load poster");
                 }

@@ -30,7 +30,7 @@ public class MovieRater {
         try (InputStream input = MovieRater.class.getResourceAsStream("/titles.json")){//reads the json file, converts it to a stream)
             ObjectMapper objectMapper = new ObjectMapper(); //creates a new object mapper which can convert json to objects
             return objectMapper.readValue(input, Movie[].class); //returns the converted list
-        } catch (IOException error) {//works if we get an error
+        } catch (IOException e) {//works if we get an error
             System.out.println("Could not load movies list, check for errors");
             return new Movie[0]; //returns empty list if there is a problem
         }
