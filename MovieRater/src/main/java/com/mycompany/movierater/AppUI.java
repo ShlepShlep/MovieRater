@@ -3,6 +3,13 @@ import java.util.*;
 import static javax.swing.JOptionPane.showMessageDialog;
 import javax.swing.*;
 import javax.swing.event.*;
+import java.awt.Image;
+import javax.imageio.ImageIO;
+import java.net.URI;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.ListCellRenderer;
+import java.awt.Component;
+
 
 public class AppUI extends javax.swing.JFrame {
     
@@ -11,6 +18,7 @@ public class AppUI extends javax.swing.JFrame {
     Movie[] movieDatabase;//our filled movie array
     DefaultListModel<Movie> ratedListModel = new DefaultListModel(); //this is so we can edit the dumb ass JList, because JList is read only
     JList<Movie> ratedMovies = new JList<>(ratedListModel); //create the JList, we need it so the Jscroll panel can display the movies
+    APIclient client = new APIclient();
     
     /**
      * Creates new form AppUI
@@ -18,7 +26,9 @@ public class AppUI extends javax.swing.JFrame {
     public AppUI(Movie[] movieDatabase) { //CONSTRUCTORRRRRR
         this.movieDatabase = movieDatabase; //gets the filled database
         initComponents();
+        ratedMovies.setCellRenderer(new MovieListRenderer());
         jScrollPane1.setViewportView(ratedMovies); //shows the list :0
+        
     }
     
     public void addMovie() {
@@ -44,8 +54,37 @@ public class AppUI extends javax.swing.JFrame {
         } else { //if all is good, then we add the newly found movie to our rated list
             ratedListModel.addElement(foundMovie);
             jTextField1.setText("");
+            loadPoster(foundMovie);
         }
     }
+    
+    private void loadPoster(Movie movie) {
+        new SwingWorker<ImageIcon, Void>() {
+            @Override
+            protected ImageIcon doInBackground() throws Exception {
+                String posterUrl = client.getPosterUrl(movie.getImdbID());
+                if (posterUrl == null) {
+                    return null;
+                } else {
+                    Image poster = ImageIO.read(new URI(posterUrl).toURL());
+                    return new ImageIcon(poster.getScaledInstance(100, 150, Image.SCALE_SMOOTH));
+                }
+            }
+            
+            @Override
+            protected void done() {
+                try {
+                    movie.setPoster(get());
+                    ratedMovies.repaint();
+                } catch (Exception e){
+                    System.out.println("Could not load poster");
+                }
+            }
+        }.execute();
+    }
+    
+   
+    
 
 
     /**
