@@ -26,11 +26,11 @@ public class AppUI extends javax.swing.JFrame {
     public AppUI(Movie[] movieDatabase) { //CONSTRUCTORRRRRR
         this.movieDatabase = movieDatabase; //gets the filled database
         initComponents();
-        ratedMovies.setLayoutOrientation(JList.HORIZONTAL_WRAP);
-        ratedMovies.setVisibleRowCount(-1);
-        ratedMovies.setFixedCellWidth(130);
-        ratedMovies.setFixedCellHeight(200);
-        ratedMovies.setCellRenderer(new MovieListRenderer());
+        ratedMovies.setLayoutOrientation(JList.HORIZONTAL_WRAP);//not top to bottom, but left to right
+        ratedMovies.setVisibleRowCount(-1); //tells it not to use a fixed number of rows, so the movies can fit based on the window
+        ratedMovies.setFixedCellWidth(130);//max width so everything is uniform
+        ratedMovies.setFixedCellHeight(200);//max height 
+        ratedMovies.setCellRenderer(new MovieListRenderer());//paints the list
         jScrollPane1.setViewportView(ratedMovies); //shows the list :0
         
     }
@@ -63,26 +63,24 @@ public class AppUI extends javax.swing.JFrame {
     }
     
     private void loadPoster(Movie movie) {
-        new SwingWorker<ImageIcon, Void>() {
+        new SwingWorker<ImageIcon, Void>() { //swingworker so the posters can load in the background so the app doesnt load for like 5 seconds
             @Override
-            protected ImageIcon doInBackground() throws Exception {
-                String posterUrl = client.getPosterUrl(movie.getImdbID());
-                if (posterUrl == null) {
+            protected ImageIcon doInBackground() throws Exception { //gets the poster in the background
+                String posterUrl = client.getPosterUrl(movie.getImdbID());//creates the url for the api call
+                if (posterUrl == null) { //if the posterUrl is empty
                     return null;
                 } else {
-                    Image poster = ImageIO.read(new URI(posterUrl).toURL());
-                    return new ImageIcon(poster.getScaledInstance(100, 150, Image.SCALE_SMOOTH));
+                    Image poster = ImageIO.read(new URI(posterUrl).toURL());//returns a picture based on the url
+                    return new ImageIcon(poster.getScaledInstance(100, 150, Image.SCALE_SMOOTH));//makes the image 100x150 and makes it smooth and not pixelated
                 }
             }
             
             @Override
-            protected void done() {
+            protected void done() {//does the actual changes in the gui
                 try {
-                    movie.setPoster(get());
-                    int index = ratedListModel.indexOf(movie);
-                    if (index >= 0) {
-                        ratedListModel.set(index, movie);
-                    }
+                    movie.setPoster(get());//get is the function that takes the return from the doInBackground
+                    int index = ratedListModel.indexOf(movie); //gets the index of the movie
+                    ratedListModel.set(index, movie);//sets it again so the size changes to be approriate for the poster
                 } catch (Exception e){
                     System.out.println("Could not load poster");
                 }
