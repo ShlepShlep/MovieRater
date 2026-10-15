@@ -47,10 +47,10 @@ public class AppUI extends javax.swing.JFrame {
         initComponents();
         setupAutocomplete();
         ratedMovies.setLayoutOrientation(JList.HORIZONTAL_WRAP);
-        ratedMovies.setVisibleRowCount(-1);
-        ratedMovies.setFixedCellWidth(130);
-        ratedMovies.setFixedCellHeight(200);
-        ratedMovies.setCellRenderer(new MovieListRenderer());
+        ratedMovies.setVisibleRowCount(-1);//used so the Jlist doesnt assign a set row value, so it can change based on the window size
+        ratedMovies.setFixedCellWidth(130); //set width to keep everything uniform
+        ratedMovies.setFixedCellHeight(200); //set height
+        ratedMovies.setCellRenderer(new MovieListRenderer()); //setting a custom renderer so that posters can also be shown
         ratedMovies.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -74,7 +74,6 @@ public class AppUI extends javax.swing.JFrame {
         listChooser.addActionListener(e -> refreshList());
         
         jScrollPane1.setViewportView(ratedMovies); //shows the list :0
-
     }
 
     public void addMovie() {
@@ -106,30 +105,30 @@ public class AppUI extends javax.swing.JFrame {
             jTextField1.setText("");
             listChooser.setSelectedItem(foundMovie.getStatus()); //jump to the list it was added to
             refreshList();
-            loadPoster(foundMovie);
+            loadPoster(foundMovie); //loads the poster
         }
     }
 
     private void loadPoster(Movie movie) {
-        new SwingWorker<ImageIcon, Void>() {
+        new SwingWorker<ImageIcon, Void>() { //swingworker can run code in the background, but cannot change the gui while its in the background
             @Override
-            protected ImageIcon doInBackground() throws Exception {
-                String posterUrl = client.getPosterUrl(movie.getImdbID());
-                if (posterUrl == null) {
+            protected ImageIcon doInBackground() throws Exception { //does the code in background
+                String posterUrl = client.getPosterUrl(movie.getImdbID()); //gets the poster link
+                if (posterUrl == null) { //if link is empty
                     return null;
                 } else {
-                    Image poster = ImageIO.read(new URI(posterUrl).toURL());
-                    return new ImageIcon(poster.getScaledInstance(100, 150, Image.SCALE_SMOOTH));
+                    Image poster = ImageIO.read(new URI(posterUrl).toURL()); //gets image that is connected to the link
+                    return new ImageIcon(poster.getScaledInstance(100, 150, Image.SCALE_SMOOTH)); //sets the same size for all images, makes it smooth and not pixelated
                 }
             }
 
             @Override
             protected void done() {
                 try {
-                    movie.setPoster(get());
-                    int index = ratedListModel.indexOf(movie);
-                    if (index >= 0) {
-                        ratedListModel.set(index, movie);
+                    movie.setPoster(get());//get function gets the return from doInBackground
+                    int index = ratedListModel.indexOf(movie); //gets index of the movie
+                    if (index >= 0) { //checks if the movie hasnt been deleted by this point
+                        ratedListModel.set(index, movie); //sets the movie again so that the size changes to accomodate the poster
                     }
                 } catch (Exception e) {
                     System.out.println("Could not load poster");

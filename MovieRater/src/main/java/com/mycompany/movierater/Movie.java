@@ -59,7 +59,7 @@ public class Movie {
     public String toString() {
         return getTitle();
     }
-    
+        
     @JsonIgnore
     private int userRating;
     @JsonIgnore
