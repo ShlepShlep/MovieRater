@@ -59,4 +59,41 @@ public class Movie {
     public String toString() {
         return getTitle();
     }
+        
+    @JsonIgnore
+    private int userRating;
+    @JsonIgnore
+    private String userReview = "";
+
+    public int getUserRating() {
+        return userRating;
+    }
+
+    public void setUserRating(int userRating) {
+        this.userRating = userRating;
+    }
+
+    public String getUserReview() {
+        return userReview;
+    }
+
+    public void setUserReview(String userReview) {
+        this.userReview = userReview;
+    }
+    
+    public static final String WATCHED = "Watched";
+    public static final String WATCHING = "Watching";
+    public static final String WANT_TO_WATCH = "Want to watch";
+
+    @JsonIgnore
+    private String status = WANT_TO_WATCH;
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
 }
+

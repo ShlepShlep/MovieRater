@@ -13,23 +13,23 @@ import com.fasterxml.jackson.databind.JsonNode;
  * @author agnes
  */
 public class APIclient {
-    private static String apiKey = "80af13f9";
+    private static String apiKey = "80af13f9"; //api key
     private static String urlBase = "https://www.omdbapi.com/?apikey=";
-    private HttpClient client = HttpClient.newHttpClient();
-    private ObjectMapper objectMapper = new ObjectMapper();
+    private HttpClient client = HttpClient.newHttpClient(); //talks to the internet so i can use request and response
+    private ObjectMapper objectMapper = new ObjectMapper(); //changes json to object and vice versa
     
     public JsonNode getMovieJson (String imdbId) {
         try {
             String fullUrl = urlBase + apiKey + "&i=" + imdbId;
             
             HttpRequest request = HttpRequest.newBuilder()
-            .uri(new URI(fullUrl)).GET().build();
+            .uri(new URI(fullUrl)).GET().build(); //newBuilder creates the new request with the url, get says it wants to read and build finishes it 
             
-            HttpResponse<String> response = client.send(request, BodyHandlers.ofString());
+            HttpResponse<String> response = client.send(request, BodyHandlers.ofString());//sends the request and then wait for answer, gets the answer as text because of BH.ofString
             
-            JsonNode movieJson = objectMapper.readTree(response.body());
+            JsonNode movieJson = objectMapper.readTree(response.body()); //converts text to json
             
-            if(movieJson.path("Response").asText().equals("False")) {
+            if(movieJson.path("Response").asText().equals("False")) { //if the response failed
                 System.out.println("Response is false");
                 return null;
             } else {
@@ -48,10 +48,10 @@ public class APIclient {
         if (movie == null) {
             return null;
         } else {
-            if (movie.path("Poster").asText("N/A").equals("N/A")) {
+            if (movie.path("Poster").asText("N/A").equals("N/A")) { //goes to the path in the json and if there isnt a movie then returns null
                 return null;
             } else {
-                return movie.path("Poster").asText();
+                return movie.path("Poster").asText(); //gets the url as text
             }
         }
     }
