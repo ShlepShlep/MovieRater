@@ -10,6 +10,7 @@ import java.net.URI;
 import javax.swing.DefaultListCellRenderer;
 import javax.swing.ListCellRenderer;
 import java.awt.Component;
+import java.io.IOException;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
@@ -24,13 +25,13 @@ import java.awt.event.FocusEvent;
 public class AppUI extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AppUI.class.getName());
+    private final MovieLibrary library;
 
     Movie[] movieDatabase;//our filled movie array
     DefaultListModel<Movie> ratedListModel = new DefaultListModel(); //this is so we can edit the dumb ass JList, because JList is read only
     JList<Movie> ratedMovies = new JList<>(ratedListModel); //create the JList, we need it so the Jscroll panel can display the movies
     APIclient client = new APIclient();
     
-    ArrayList<Movie> myMovies = new ArrayList<>(); //every movie the user added, from all three lists
     String[] statuses = {Movie.WATCHED, Movie.WATCHING, Movie.WANT_TO_WATCH};
     JComboBox<String> listChooser = new JComboBox<>(statuses); //decides which list is shown
     
@@ -38,12 +39,14 @@ public class AppUI extends javax.swing.JFrame {
     DefaultListModel<Movie> suggestionModel = new DefaultListModel<>();
     JList<Movie> suggestionList = new JList<>(suggestionModel);
     boolean fillingText = false; //true while we put a chosen title in the box, so that doesn't trigger a new search
+    
 
     /**
      * Creates new form AppUI
      */
     public AppUI(Movie[] movieDatabase) { //CONSTRUCTORRRRRR
         this.movieDatabase = movieDatabase; //gets the filled database
+        library = new MovieLibrary(movieDatabase, MovieLibrary.defaultSaveFile());
         initComponents();
         setupAutocomplete();
         ratedMovies.setLayoutOrientation(JList.HORIZONTAL_WRAP);
@@ -74,6 +77,8 @@ public class AppUI extends javax.swing.JFrame {
         listChooser.addActionListener(e -> refreshList());
         
         jScrollPane1.setViewportView(ratedMovies); //shows the list :0
+        loadSavedMovies();
+        refreshList();
     }
 
     public void addMovie() {
@@ -94,14 +99,14 @@ public class AppUI extends javax.swing.JFrame {
 
         if (foundMovie == null) { //if we didnt find the movie in the database
             showMessageDialog(null, "Movie not found: " + movieTitle);
-        } else if (myMovies.contains(foundMovie)) { //if movie is already in the rated list
+        } else if (library.getMovies().contains(foundMovie)) { //if movie is already in the rated list
             showMessageDialog(null, "Movie already in list");
         } else {
             //the dialog starts on whichever list you're currently looking at
             if (!askForDetails(foundMovie, (String) listChooser.getSelectedItem())) {
                 return; //user cancelled, so don't add it
             }
-            myMovies.add(foundMovie);
+            library.addMovie(foundMovie);
             jTextField1.setText("");
             listChooser.setSelectedItem(foundMovie.getStatus()); //jump to the list it was added to
             refreshList();
@@ -140,10 +145,29 @@ public class AppUI extends javax.swing.JFrame {
     private void refreshList() {
         String chosen = (String) listChooser.getSelectedItem();
         ratedListModel.clear();
-        for (Movie m : myMovies) {
-            if (m.getStatus().equals(chosen)) {
+        for (Movie m : library.getMovies()) {
+            if (chosen.equals(m.getStatus())) {
                 ratedListModel.addElement(m);
             }
+        }
+    }
+    
+    private void loadSavedMovies() {
+        try {
+            library.load();
+            for(Movie m : library.getMovies()) {
+                loadPoster(m);
+            }
+        } catch (IOException e) {
+            showMessageDialog(this, "Could not read a saved list");
+        }
+    }
+    
+    private void saveMovies() {
+        try {
+            showMessageDialog(this, "Saved " + library.save() + " movies");
+        } catch(IOException e) {
+            showMessageDialog(this, "Could not save");
         }
     }
 
@@ -232,13 +256,19 @@ public class AppUI extends javax.swing.JFrame {
             panel.add(new JScrollPane(reviewText), BorderLayout.CENTER);
         }
 
-        Object[] buttons = {"Edit", "Close"};
+        Object[] buttons = {"Edit", "Delete", "Close"};
         int choice = JOptionPane.showOptionDialog(this, panel, movie.getTitle(),
-                JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, buttons, buttons[1]);
+                JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, buttons, buttons[2]);
 
         if (choice == 0) { //"Edit" was clicked
             if (askForDetails(movie, movie.getStatus())) {
                 refreshList(); //if the category changed, the movie moves out of this list
+            }
+        } else if (choice == 1) {
+            int reply = JOptionPane.showConfirmDialog(this, "Remove " + movie.getTitle() + " from your list?", "Delete", JOptionPane.YES_NO_OPTION);
+            if (reply == JOptionPane.YES_OPTION) {
+                library.removeMovie(movie);
+                refreshList();
             }
         }
     }
@@ -449,14 +479,17 @@ public class AppUI extends javax.swing.JFrame {
         jScrollPane1 = new javax.swing.JScrollPane();
         jTextField1 = new javax.swing.JTextField();
         jButton1 = new javax.swing.JButton();
+        saveButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
-        jTextField1.setText("Title here");
         jTextField1.addActionListener(this::jTextField1ActionPerformed);
 
-        jButton1.setText("Add");
+        jButton1.setText("ADD");
         jButton1.addActionListener(this::jButton1ActionPerformed);
+
+        saveButton.setText("SAVE");
+        saveButton.addActionListener(this::saveButtonActionPerformed);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -469,7 +502,9 @@ public class AppUI extends javax.swing.JFrame {
                     .addGroup(layout.createSequentialGroup()
                         .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 170, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton1, javax.swing.GroupLayout.DEFAULT_SIZE, 92, Short.MAX_VALUE)))
+                        .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(saveButton, javax.swing.GroupLayout.DEFAULT_SIZE, 135, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -478,9 +513,10 @@ public class AppUI extends javax.swing.JFrame {
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                     .addComponent(jTextField1)
-                    .addComponent(jButton1, javax.swing.GroupLayout.DEFAULT_SIZE, 32, Short.MAX_VALUE))
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 319, Short.MAX_VALUE)
+                    .addComponent(jButton1, javax.swing.GroupLayout.DEFAULT_SIZE, 32, Short.MAX_VALUE)
+                    .addComponent(saveButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 325, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
@@ -499,6 +535,10 @@ public class AppUI extends javax.swing.JFrame {
             addMovie();
         }
     }//GEN-LAST:event_jTextField1ActionPerformed
+
+    private void saveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveButtonActionPerformed
+        saveMovies();
+    }//GEN-LAST:event_saveButtonActionPerformed
 
     /**
      * @param args the command line arguments
@@ -528,5 +568,6 @@ public class AppUI extends javax.swing.JFrame {
     private javax.swing.JButton jButton1;
     private javax.swing.JScrollPane jScrollPane1;
     private javax.swing.JTextField jTextField1;
+    private javax.swing.JButton saveButton;
     // End of variables declaration//GEN-END:variables
 }
