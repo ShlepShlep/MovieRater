@@ -43,7 +43,7 @@ The saved movie/TV-show list can saved in a file (placed in the users home folde
 - OMDb API: fetching movie posters
 
 ## Project structure
- Class | Responsibility |
+ Class | Action |
 |---|---|
 | `MovieRater` | Starts the app: sets the dark mode with accents, loads the movie database and opens the window |
 | `AppUI` | The main window: search field, buttons, poster grid and dialogs |
