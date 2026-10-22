@@ -5,6 +5,11 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 
+/**
+ * This class stores the saved movies, default file location.
+ * It can fetch the movie list, add/remove elements, save the list to a file, load the list from the file
+ * @author agnes
+ */
 public class MovieLibrary {
 
     private final ArrayList<Movie> myMovies = new ArrayList<>(); //List of all movies added to one of the three lists
@@ -71,7 +76,7 @@ public class MovieLibrary {
             }
             movie.setStatus(s.getStatus());
             movie.setUserRating(s.getUserRating());
-            if (s.getUserReview().isEmpty()) {
+            if (s.getUserReview()==null) {
                 movie.setUserReview("");
             }
             else {

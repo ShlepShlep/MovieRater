@@ -8,6 +8,10 @@ import java.net.http.HttpResponse.BodyHandlers;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
+/**
+ * This class handles everything related to the internet,API and its request/response 
+ * @author agnes
+ */
 public class APIclient {
     private static String apiKey = "80af13f9";
     private static String urlBase = "https://www.omdbapi.com/?apikey=";

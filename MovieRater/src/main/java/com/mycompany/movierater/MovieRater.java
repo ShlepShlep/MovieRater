@@ -9,6 +9,10 @@ import com.formdev.flatlaf.FlatLaf;
 import java.util.Collections;
 import java.awt.EventQueue;
 
+/**
+ * This method changes the theme, loads the movie database from the JSON file and opens up the form
+ * @author agnes
+ */
 public class MovieRater {
 
     public static void main(String[] args) {

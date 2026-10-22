@@ -17,8 +17,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.io.IOException;
 import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.List;
 import javax.imageio.ImageIO;
 import javax.swing.*;
 import static javax.swing.JOptionPane.showMessageDialog;
@@ -27,26 +26,30 @@ import javax.swing.event.*;
 public class AppUI extends javax.swing.JFrame {
 
     private final MovieLibrary library;
+    private final MovieSearch movieSearch;
 
-    Movie[] movieDatabase;//our filled movie array
-    DefaultListModel<Movie> movieGridModel = new DefaultListModel(); //this is so we can edit the dumb ass JList, because JList is read only
-    JList<Movie> movieGrid = new JList<>(movieGridModel); //create the JList, we need it so the Jscroll panel can display the movies
-    APIclient client = new APIclient();
+    private final Movie[] movieDatabase;//our filled movie array
+    private final DefaultListModel<Movie> movieGridModel = new DefaultListModel<>(); //this is so we can edit the JList, because JList is read only
+    private final JList<Movie> movieGrid = new JList<>(movieGridModel); //create the JList, we need it so the Jscroll panel can display the movies
+    private final APIclient client = new APIclient();
     
-    String[] statuses = {Movie.WATCHED, Movie.WATCHING, Movie.WANT_TO_WATCH};
-    JComboBox<String> listChooser = new JComboBox<>(statuses); //decides which list is shown
+    private final String[] statuses = {Movie.WATCHED, Movie.WATCHING, Movie.WANT_TO_WATCH};
+    private final JComboBox<String> listChooser = new JComboBox<>(statuses); //decides which list is shown
     
-    JPopupMenu suggestionPopup = new JPopupMenu();
-    DefaultListModel<Movie> suggestionModel = new DefaultListModel<>();
-    JList<Movie> suggestionList = new JList<>(suggestionModel);
-    boolean fillingText = false; //true while we put a chosen title in the box, so that doesn't trigger a new search
-
+    private final JPopupMenu suggestionPopup = new JPopupMenu();
+    private final DefaultListModel<Movie> suggestionModel = new DefaultListModel<>();
+    private final JList<Movie> suggestionList = new JList<>(suggestionModel);
+    private boolean fillingText = false; //true while we put a chosen title in the box, so that doesn't trigger a new search
+    private static final int MAX_SUGGESTIONS = 6;
+    private static final int MIN_POPUP_WIDTH = 260;
+    
     /**
      * Creates new form AppUI
      */
-    public AppUI(Movie[] movieDatabase) { //CONSTRUCTORRRRRR
+    public AppUI(Movie[] movieDatabase) {
         this.movieDatabase = movieDatabase; //gets the filled database
         library = new MovieLibrary(movieDatabase, MovieLibrary.defaultSaveFile());
+        movieSearch = new MovieSearch(movieDatabase);
         
         initComponents();
         setupAutocomplete();
@@ -57,6 +60,9 @@ public class AppUI extends javax.swing.JFrame {
         refreshList();
     }
     
+    /**
+     * This method sets how the movies are displayed, makes the poster clickable
+     */
     private void setupMovieGrid() {
         int width = 130;
         int height = 200;
@@ -81,7 +87,7 @@ public class AppUI extends javax.swing.JFrame {
             }
         });
     }
-    
+    //MAYBE ADD JAVADOC
     private void setupListChooser() {
         JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT));
         header.add(new JLabel("Show list:"));
@@ -91,6 +97,11 @@ public class AppUI extends javax.swing.JFrame {
         movieScrollPane.setViewportView(movieGrid); //shows the list
     }
 
+    /**
+     * This method tries to add the input movie to the list by going through the database in a loop
+     * It checks whether or not the movie is not in the database or a duplicate
+     * If all is well, adds the movie and jumps to the list the movie is in
+     */
     private void addMovie() {
         String movieTitle = searchField.getText().trim(); //gets the entered title and removes any unneccecery spaces
 
@@ -123,7 +134,13 @@ public class AppUI extends javax.swing.JFrame {
             loadPoster(foundMovie); //loads the poster
         }
     }
-
+    
+    /**
+     * This method tries to download the posters in the background so the window does not freeze up while the posters are loading
+     * Posters are all made to be the same size
+     * 
+     * @param movie determines which movies poster should be called
+     */
     private void loadPoster(Movie movie) {
         new SwingWorker<ImageIcon, Void>() { //swingworker can run code in the background, but cannot change the gui while its in the background
             @Override
@@ -181,6 +198,7 @@ public class AppUI extends javax.swing.JFrame {
         }
     }
 
+    //ADD JAVADOC
 //used both when adding a movie and when editing one, returns false if cancelled
     private boolean askForDetails(Movie movie, String startStatus) {
         JComboBox<String> statusBox = new JComboBox<>(statuses);
@@ -246,6 +264,7 @@ public class AppUI extends javax.swing.JFrame {
         return true;
     }
 
+    //ADD JAVADOC
     private void showReview(Movie movie) {
         boolean watched = movie.getStatus().equals(Movie.WATCHED);
 
@@ -283,6 +302,7 @@ public class AppUI extends javax.swing.JFrame {
         }
     }
     
+    //ADD JAVADOC
     private void setupAutocomplete() {
         suggestionList.setFocusable(false); //so the popup never steals focus from the text field
         suggestionPopup.setFocusable(false);
@@ -368,42 +388,18 @@ public class AppUI extends javax.swing.JFrame {
             return;
         }
         
-        String query = searchField.getText();
-            
-        if (query.length() < 2) {
-            suggestionPopup.setVisible(false);
-            return;
-        }
-
-        //score every title, lower score = better match, -1 = no match
-        HashMap<Movie, Integer> scores = new HashMap<>();
-        ArrayList<Movie> matches = new ArrayList<>();
-        for (Movie m : movieDatabase) {
-            int score = matchScore(m.getTitle().toLowerCase(), query);
-            if (score >= 0) {
-                scores.put(m, score);
-                matches.add(m);
-            }
-        }
-
-        //best score first, and if equal then the higher rated movie first
-        matches.sort((a, b) -> {
-            int byScore = Integer.compare(scores.get(a), scores.get(b));
-            return byScore != 0 ? byScore : Double.compare(b.getRating(), a.getRating());
-        });
-
-        int maxSuggestions = 6;
-        int minWidth = 260;
+        List<Movie> results = movieSearch.search(searchField.getText(), MAX_SUGGESTIONS);
+        
         suggestionModel.clear();
-        for (int i = 0; i < Math.min(maxSuggestions, matches.size()); i++) {
-            suggestionModel.addElement(matches.get(i));
+        for(Movie m : results) {
+            suggestionModel.addElement(m);
         }
-
+        
         if (suggestionModel.isEmpty()) {
             suggestionPopup.setVisible(false);
             return;
         }
-        suggestionList.setFixedCellWidth(Math.max(searchField.getWidth(), minWidth));
+        suggestionList.setFixedCellWidth(Math.max(searchField.getWidth(), MIN_POPUP_WIDTH));
         if (suggestionPopup.isVisible()) {
             suggestionPopup.pack(); //resize for the new number of rows
         } else {
@@ -420,64 +416,6 @@ public class AppUI extends javax.swing.JFrame {
             fillingText = false;
         }
         searchField.requestFocusInWindow();
-    }
-
-    //0 = title starts with the query, 1 = a word in the title starts with it, 2 = title contains it,
-    //3+ = close but with typos, -1 = no match
-    private int matchScore(String title, String query) {
-        if (title.startsWith(query)) {
-            return 0;
-        }
-        for (int s = 1; s < title.length(); s++) {
-            if (title.charAt(s - 1) == ' ' && title.startsWith(query, s)) {
-                return 1;
-            }
-        }
-        if (title.contains(query)) {
-            return 2;
-        }
-
-        //how many typos we allow depends on how much was typed
-        int maxTypos = query.length() <= 3 ? 0 : (query.length() <= 6 ? 1 : 2);
-        if (maxTypos == 0) {
-            return -1;
-        }
-
-        //compare the query to the start of the title and the start of every word,
-        //using chunks about as long as the query
-        int best = Integer.MAX_VALUE;
-        for (int s = 0; s < title.length(); s++) {
-            if (s != 0 && title.charAt(s - 1) != ' ') {
-                continue;
-            }
-            for (int len = query.length() - 1; len <= query.length() + 1; len++) {
-                if (len > 0 && s + len <= title.length()) {
-                    best = Math.min(best, editDistance(query, title.substring(s, s + len)));
-                }
-            }
-        }
-        return best <= maxTypos ? 3 + best : -1;
-    }
-
-    //number of single-letter changes (add, remove, replace, swap two neighbours) to turn a into b
-    private int editDistance(String a, String b) {
-        int[][] d = new int[a.length() + 1][b.length() + 1];
-        for (int i = 0; i <= a.length(); i++) {
-            d[i][0] = i;
-        }
-        for (int j = 0; j <= b.length(); j++) {
-            d[0][j] = j;
-        }
-        for (int i = 1; i <= a.length(); i++) {
-            for (int j = 1; j <= b.length(); j++) {
-                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
-                d[i][j] = Math.min(Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1), d[i - 1][j - 1] + cost);
-                if (i > 1 && j > 1 && a.charAt(i - 1) == b.charAt(j - 2) && a.charAt(i - 2) == b.charAt(j - 1)) {
-                    d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1); //swapped letters like "lr" vs "rl"
-                }
-            }
-        }
-        return d[a.length()][b.length()];
     }
 
     /**

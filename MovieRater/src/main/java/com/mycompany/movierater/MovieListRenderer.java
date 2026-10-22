@@ -5,6 +5,10 @@ import javax.swing.DefaultListCellRenderer;
 import javax.swing.SwingConstants;
 import javax.swing.JList;
 
+/**
+ * Custom ListCellRenderer that sets the display to be text and icon(poster)
+ * @author agnes
+ */
 public class MovieListRenderer extends DefaultListCellRenderer{
     public MovieListRenderer() {
         setHorizontalTextPosition(SwingConstants.CENTER);
