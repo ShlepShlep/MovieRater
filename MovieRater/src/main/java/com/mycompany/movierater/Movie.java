@@ -13,7 +13,7 @@ public class Movie {
     @JsonProperty("year") private int year;
     @JsonProperty("rating") private double rating;
     @JsonProperty("genres") String genresString;
-    @JsonIgnore ImageIcon poster;
+    @JsonIgnore ImageIcon poster; //ignores this value during serialization due to @JsonIgnore
     
     public ImageIcon getPoster() {
         return poster;
@@ -55,7 +55,7 @@ public class Movie {
         return genresString.split(",");//splits the string into an array of genres
     }
     
-    @Override //using this because stupid JList prints bullshit otherwise, this overrites the toString function, and if we call our object in a print or wtv we need a string, this will get called
+    @Override //this overwrites the default toString function, so the object can be printed
     public String toString() {
         return getTitle();
     }
