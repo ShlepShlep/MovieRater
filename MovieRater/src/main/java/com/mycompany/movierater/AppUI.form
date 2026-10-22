@@ -26,11 +26,11 @@
           <Group type="102" attributes="0">
               <EmptySpace max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" attributes="0">
-                  <Component id="jScrollPane1" max="32767" attributes="0"/>
+                  <Component id="movieScrollPane" max="32767" attributes="0"/>
                   <Group type="102" attributes="0">
-                      <Component id="jTextField1" min="-2" pref="170" max="-2" attributes="0"/>
+                      <Component id="searchField" min="-2" pref="170" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
-                      <Component id="jButton1" min="-2" pref="135" max="-2" attributes="0"/>
+                      <Component id="addButton" min="-2" pref="135" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
                       <Component id="saveButton" pref="135" max="32767" attributes="0"/>
                   </Group>
@@ -44,33 +44,33 @@
           <Group type="102" attributes="0">
               <EmptySpace max="-2" attributes="0"/>
               <Group type="103" groupAlignment="0" max="-2" attributes="0">
-                  <Component id="jTextField1" max="32767" attributes="0"/>
-                  <Component id="jButton1" pref="32" max="32767" attributes="0"/>
+                  <Component id="searchField" max="32767" attributes="0"/>
+                  <Component id="addButton" pref="32" max="32767" attributes="0"/>
                   <Component id="saveButton" max="32767" attributes="0"/>
               </Group>
               <EmptySpace type="unrelated" max="-2" attributes="0"/>
-              <Component id="jScrollPane1" pref="325" max="32767" attributes="0"/>
+              <Component id="movieScrollPane" pref="325" max="32767" attributes="0"/>
               <EmptySpace max="-2" attributes="0"/>
           </Group>
       </Group>
     </DimensionLayout>
   </Layout>
   <SubComponents>
-    <Container class="javax.swing.JScrollPane" name="jScrollPane1">
+    <Container class="javax.swing.JScrollPane" name="movieScrollPane">
 
       <Layout class="org.netbeans.modules.form.compat2.layouts.support.JScrollPaneSupportLayout"/>
     </Container>
-    <Component class="javax.swing.JTextField" name="jTextField1">
+    <Component class="javax.swing.JTextField" name="searchField">
       <Events>
-        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jTextField1ActionPerformed"/>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="searchFieldActionPerformed"/>
       </Events>
     </Component>
-    <Component class="javax.swing.JButton" name="jButton1">
+    <Component class="javax.swing.JButton" name="addButton">
       <Properties>
         <Property name="text" type="java.lang.String" value="ADD"/>
       </Properties>
       <Events>
-        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="jButton1ActionPerformed"/>
+        <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="addButtonActionPerformed"/>
       </Events>
     </Component>
     <Component class="javax.swing.JButton" name="saveButton">

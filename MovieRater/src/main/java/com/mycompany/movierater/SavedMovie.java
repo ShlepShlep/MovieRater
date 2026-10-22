@@ -1,13 +1,5 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package com.mycompany.movierater;
 
-/**
- *
- * @author agnes
- */
 public class SavedMovie {
     private String imdbId;
     private String status;
@@ -39,17 +31,17 @@ public class SavedMovie {
         this.status = status;
     }
     
-    public String getReview(){
+    public String getUserReview(){
         return review;
     }
-    public void setReview(String review) {
+    public void setUserReview(String review) {
         this.review = review;
     }
     
-    public int getRating(){
+    public int getUserRating(){
         return rating;
     }
-    public void setRating(int rating) {
+    public void setUserRating(int rating) {
         this.rating = rating;
     }
 }
