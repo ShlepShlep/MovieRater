@@ -87,7 +87,10 @@ public class AppUI extends javax.swing.JFrame {
             }
         });
     }
-    //MAYBE ADD JAVADOC
+    /**
+     * This method sets up the "Show list" dropdown above the movie grid and puts the grid
+     * in the scroll pane. Picking a list refreshes the grid.
+     */
     private void setupListChooser() {
         JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT));
         header.add(new JLabel("Show list:"));
@@ -169,6 +172,9 @@ public class AppUI extends javax.swing.JFrame {
         }.execute();
     }
     
+    /**
+     * This method refills the movie grid with the movies from the list picked in the dropdown.
+     */
     private void refreshList() {
         String chosen = (String) listChooser.getSelectedItem();
         movieGridModel.clear();
@@ -179,6 +185,10 @@ public class AppUI extends javax.swing.JFrame {
         }
     }
     
+    /**
+     * This method loads the saved movies from the library and fetches a poster for each one.
+     * Shows a message if the saved list can't be read.
+     */
     private void loadSavedMovies() {
         try {
             library.load();
@@ -190,6 +200,10 @@ public class AppUI extends javax.swing.JFrame {
         }
     }
     
+    /**
+     * Saves all movies through the library and shows how many were saved.
+     * Shows a message if saving fails.
+     */
     private void saveMovies() {
         try {
             showMessageDialog(this, "Saved " + library.save() + " movies");
@@ -198,8 +212,14 @@ public class AppUI extends javax.swing.JFrame {
         }
     }
 
-    //ADD JAVADOC
-//used both when adding a movie and when editing one, returns false if cancelled
+    /**
+     * This method opens a dialog to choose a movie's category and, if it is "Watched",
+     * give a rating and write a review. Used for both adding and editing.
+     *
+     * @param movie       the movie to update
+     * @param startStatus the category selected when the dialog opens
+     * @return {@code true} if the user confirmed, {@code false} if cancelled
+     */
     private boolean askForDetails(Movie movie, String startStatus) {
         JComboBox<String> statusBox = new JComboBox<>(statuses);
         statusBox.setSelectedItem(startStatus);
@@ -264,7 +284,12 @@ public class AppUI extends javax.swing.JFrame {
         return true;
     }
 
-    //ADD JAVADOC
+    /**
+     * This method shows a pop-up with a movie's category and, if it is "Watched", its rating and review.
+     * The pop-up has buttons to edit the movie, delete it from the library (after confirming), or close.
+     *
+     * @param movie the movie to show
+     */
     private void showReview(Movie movie) {
         boolean watched = movie.getStatus().equals(Movie.WATCHED);
 
@@ -302,7 +327,11 @@ public class AppUI extends javax.swing.JFrame {
         }
     }
     
-    //ADD JAVADOC
+    /**
+     * This method sets up the autocomplete popup under the search field. Suggestions update
+     * as you type, the arrow keys move through them, Escape closes the popup,
+     * and clicking a suggestion fills in its title.
+     */
     private void setupAutocomplete() {
         suggestionList.setFocusable(false); //so the popup never steals focus from the text field
         suggestionPopup.setFocusable(false);
@@ -383,6 +412,11 @@ public class AppUI extends javax.swing.JFrame {
         });
     }
 
+    /**
+     * This method searches for movies matching the text in the search field and shows the
+     * best matches in the popup under it. Hides the popup if nothing matches.
+     * Does nothing while a chosen title is being put into the field.
+     */
     private void updateSuggestions() {
         if (fillingText) {
             return;
@@ -407,6 +441,10 @@ public class AppUI extends javax.swing.JFrame {
         }
     }
 
+    /**
+     * This method puts the selected suggestion's title into the search field and closes the
+     * popup. The field keeps focus so the user can press Add or Enter next.
+     */
     private void acceptSuggestion() {
         Movie chosen = suggestionList.getSelectedValue();
         suggestionPopup.setVisible(false);
