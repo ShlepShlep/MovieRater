@@ -1,83 +1,109 @@
 package com.mycompany.movierater;
 
-import java.util.*;
-import static javax.swing.JOptionPane.showMessageDialog;
-import javax.swing.*;
-import javax.swing.event.*;
-import java.awt.Image;
-import javax.imageio.ImageIO;
-import java.net.URI;
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.ListCellRenderer;
-import java.awt.Component;
-
 import java.awt.BorderLayout;
+import java.awt.Component;
 import java.awt.FlowLayout;
+import java.awt.Image;
 import java.awt.Rectangle;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.awt.event.KeyAdapter;
-import java.awt.event.KeyEvent;
+import java.awt.GridLayout;
+import java.awt.Color;
+import java.awt.Insets;
+import java.awt.Graphics;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.IOException;
+import java.net.URI;
+import java.util.List;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import static javax.swing.JOptionPane.showMessageDialog;
+import javax.swing.event.*;
 
 public class AppUI extends javax.swing.JFrame {
 
-    private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AppUI.class.getName());
+    private final MovieLibrary library;
+    private final MovieSearch movieSearch;
 
-    Movie[] movieDatabase;//our filled movie array
-    DefaultListModel<Movie> ratedListModel = new DefaultListModel(); //this is so we can edit the dumb ass JList, because JList is read only
-    JList<Movie> ratedMovies = new JList<>(ratedListModel); //create the JList, we need it so the Jscroll panel can display the movies
-    APIclient client = new APIclient();
+    private final Movie[] movieDatabase;//our filled movie array
+    private final DefaultListModel<Movie> movieGridModel = new DefaultListModel<>(); //this is so we can edit the JList, because JList is read only
+    private final JList<Movie> movieGrid = new JList<>(movieGridModel); //create the JList, we need it so the Jscroll panel can display the movies
+    private final APIclient client = new APIclient();
     
-    ArrayList<Movie> myMovies = new ArrayList<>(); //every movie the user added, from all three lists
-    String[] statuses = {Movie.WATCHED, Movie.WATCHING, Movie.WANT_TO_WATCH};
-    JComboBox<String> listChooser = new JComboBox<>(statuses); //decides which list is shown
+    private final String[] statuses = {Movie.WATCHED, Movie.WATCHING, Movie.WANT_TO_WATCH};
+    private final JComboBox<String> listChooser = new JComboBox<>(statuses); //decides which list is shown
     
-    JPopupMenu suggestionPopup = new JPopupMenu();
-    DefaultListModel<Movie> suggestionModel = new DefaultListModel<>();
-    JList<Movie> suggestionList = new JList<>(suggestionModel);
-    boolean fillingText = false; //true while we put a chosen title in the box, so that doesn't trigger a new search
-
+    private final JPopupMenu suggestionPopup = new JPopupMenu();
+    private final DefaultListModel<Movie> suggestionModel = new DefaultListModel<>();
+    private final JList<Movie> suggestionList = new JList<>(suggestionModel);
+    private boolean fillingText = false; //true while we put a chosen title in the box, so that doesn't trigger a new search
+    private static final int MAX_SUGGESTIONS = 6;
+    private static final int MIN_POPUP_WIDTH = 260;
+    
     /**
      * Creates new form AppUI
      */
-    public AppUI(Movie[] movieDatabase) { //CONSTRUCTORRRRRR
+    public AppUI(Movie[] movieDatabase) {
         this.movieDatabase = movieDatabase; //gets the filled database
+        library = new MovieLibrary(movieDatabase, MovieLibrary.defaultSaveFile());
+        movieSearch = new MovieSearch(movieDatabase);
+        
         initComponents();
         setupAutocomplete();
-        ratedMovies.setLayoutOrientation(JList.HORIZONTAL_WRAP);
-        ratedMovies.setVisibleRowCount(-1);//used so the Jlist doesnt assign a set row value, so it can change based on the window size
-        ratedMovies.setFixedCellWidth(130); //set width to keep everything uniform
-        ratedMovies.setFixedCellHeight(200); //set height
-        ratedMovies.setCellRenderer(new MovieListRenderer()); //setting a custom renderer so that posters can also be shown
-        ratedMovies.addMouseListener(new MouseAdapter() {
+        setupMovieGrid();
+        setupListChooser();
+
+        loadSavedMovies();
+        refreshList();
+    }
+    
+    /**
+     * This method sets how the movies are displayed, makes the poster clickable
+     */
+    private void setupMovieGrid() {
+        int width = 130;
+        int height = 200;
+        movieGrid.setLayoutOrientation(JList.HORIZONTAL_WRAP);
+        movieGrid.setVisibleRowCount(-1);//used so the Jlist doesnt assign a set row value, so it can change based on the window size
+        movieGrid.setFixedCellWidth(width); //set width to keep everything uniform
+        movieGrid.setFixedCellHeight(height); //set height
+        movieGrid.setCellRenderer(new MovieListRenderer()); //setting a custom renderer so that posters can also be shown
+        movieGrid.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
-                int index = ratedMovies.locationToIndex(e.getPoint());
+                int index = movieGrid.locationToIndex(e.getPoint());
                 if (index < 0) {
                     return;
                 }
                 //locationToIndex gives the nearest cell even if you click empty space
-                Rectangle cell = ratedMovies.getCellBounds(index, index);
+                Rectangle cell = movieGrid.getCellBounds(index, index);
                 if (cell == null || !cell.contains(e.getPoint())) {
                     return;
                 }
-                showReview(ratedListModel.get(index));
+                showReview(movieGridModel.get(index));
             }
         });
-        
+    }
+    //MAYBE ADD JAVADOC
+    private void setupListChooser() {
         JPanel header = new JPanel(new FlowLayout(FlowLayout.LEFT));
         header.add(new JLabel("Show list:"));
         header.add(listChooser);
-        jScrollPane1.setColumnHeaderView(header); //puts it above the posters, right under the search bar
+        movieScrollPane.setColumnHeaderView(header); //puts it above the posters, right under the search bar
         listChooser.addActionListener(e -> refreshList());
-        
-        jScrollPane1.setViewportView(ratedMovies); //shows the list :0
+        movieScrollPane.setViewportView(movieGrid); //shows the list
     }
 
-    public void addMovie() {
-        String movieTitle = jTextField1.getText().trim(); //gets the entered title and removes any unneccecery spaces
+    /**
+     * This method tries to add the input movie to the list by going through the database in a loop
+     * It checks whether or not the movie is not in the database or a duplicate
+     * If all is well, adds the movie and jumps to the list the movie is in
+     */
+    private void addMovie() {
+        String movieTitle = searchField.getText().trim(); //gets the entered title and removes any unneccecery spaces
 
         if (movieTitle.isEmpty()) {
             return; //if its empty
@@ -93,22 +119,28 @@ public class AppUI extends javax.swing.JFrame {
         }
 
         if (foundMovie == null) { //if we didnt find the movie in the database
-            showMessageDialog(null, "Movie not found: " + movieTitle);
-        } else if (myMovies.contains(foundMovie)) { //if movie is already in the rated list
-            showMessageDialog(null, "Movie already in list");
+            showMessageDialog(this, "Movie not found: " + movieTitle);
+        } else if (library.getMovies().contains(foundMovie)) { //if movie is already in the rated list
+            showMessageDialog(this, "Movie already in list");
         } else {
             //the dialog starts on whichever list you're currently looking at
             if (!askForDetails(foundMovie, (String) listChooser.getSelectedItem())) {
                 return; //user cancelled, so don't add it
             }
-            myMovies.add(foundMovie);
-            jTextField1.setText("");
+            library.addMovie(foundMovie);
+            searchField.setText("");
             listChooser.setSelectedItem(foundMovie.getStatus()); //jump to the list it was added to
             refreshList();
             loadPoster(foundMovie); //loads the poster
         }
     }
-
+    
+    /**
+     * This method tries to download the posters in the background so the window does not freeze up while the posters are loading
+     * Posters are all made to be the same size
+     * 
+     * @param movie determines which movies poster should be called
+     */
     private void loadPoster(Movie movie) {
         new SwingWorker<ImageIcon, Void>() { //swingworker can run code in the background, but cannot change the gui while its in the background
             @Override
@@ -126,9 +158,9 @@ public class AppUI extends javax.swing.JFrame {
             protected void done() {
                 try {
                     movie.setPoster(get());//get function gets the return from doInBackground
-                    int index = ratedListModel.indexOf(movie); //gets index of the movie
+                    int index = movieGridModel.indexOf(movie); //gets index of the movie
                     if (index >= 0) { //checks if the movie hasnt been deleted by this point
-                        ratedListModel.set(index, movie); //sets the movie again so that the size changes to accomodate the poster
+                        movieGridModel.set(index, movie); //sets the movie again so that the size changes to accomodate the poster
                     }
                 } catch (Exception e) {
                     System.out.println("Could not load poster");
@@ -139,14 +171,34 @@ public class AppUI extends javax.swing.JFrame {
     
     private void refreshList() {
         String chosen = (String) listChooser.getSelectedItem();
-        ratedListModel.clear();
-        for (Movie m : myMovies) {
-            if (m.getStatus().equals(chosen)) {
-                ratedListModel.addElement(m);
+        movieGridModel.clear();
+        for (Movie m : library.getMovies()) {
+            if (chosen.equals(m.getStatus())) {
+                movieGridModel.addElement(m);
             }
         }
     }
+    
+    private void loadSavedMovies() {
+        try {
+            library.load();
+            for(Movie m : library.getMovies()) {
+                loadPoster(m);
+            }
+        } catch (IOException e) {
+            showMessageDialog(this, "Could not read a saved list");
+        }
+    }
+    
+    private void saveMovies() {
+        try {
+            showMessageDialog(this, "Saved " + library.save() + " movies");
+        } catch(IOException e) {
+            showMessageDialog(this, "Could not save");
+        }
+    }
 
+    //ADD JAVADOC
 //used both when adding a movie and when editing one, returns false if cancelled
     private boolean askForDetails(Movie movie, String startStatus) {
         JComboBox<String> statusBox = new JComboBox<>(statuses);
@@ -157,12 +209,12 @@ public class AppUI extends javax.swing.JFrame {
 
         JTextArea reviewArea = new JTextArea(movie.getUserReview(), 6, 25) {
             @Override
-            protected void paintComponent(java.awt.Graphics g) {
+            protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 if (getText().isEmpty()) {
-                    g.setColor(java.awt.Color.GRAY);
+                    g.setColor(Color.GRAY);
                     g.setFont(getFont());
-                    java.awt.Insets in = getInsets();
+                    Insets in = getInsets();
                     g.drawString("Write a review...", in.left, in.top + g.getFontMetrics().getAscent());
                 }
             }
@@ -187,7 +239,7 @@ public class AppUI extends javax.swing.JFrame {
         ratingRow.add(new JLabel("Your rating (out of 5):"));
         ratingRow.add(ratingBox);
 
-        JPanel top = new JPanel(new java.awt.GridLayout(2, 1));
+        JPanel top = new JPanel(new GridLayout(2, 1));
         top.add(statusRow);
         top.add(ratingRow);
 
@@ -212,10 +264,11 @@ public class AppUI extends javax.swing.JFrame {
         return true;
     }
 
+    //ADD JAVADOC
     private void showReview(Movie movie) {
         boolean watched = movie.getStatus().equals(Movie.WATCHED);
 
-        JPanel top = new JPanel(new java.awt.GridLayout(0, 1));
+        JPanel top = new JPanel(new GridLayout(0, 1));
         top.add(new JLabel("Category: " + movie.getStatus()));
 
         JPanel panel = new JPanel(new BorderLayout(0, 8));
@@ -232,17 +285,24 @@ public class AppUI extends javax.swing.JFrame {
             panel.add(new JScrollPane(reviewText), BorderLayout.CENTER);
         }
 
-        Object[] buttons = {"Edit", "Close"};
+        Object[] buttons = {"Edit", "Delete", "Close"};
         int choice = JOptionPane.showOptionDialog(this, panel, movie.getTitle(),
-                JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, buttons, buttons[1]);
+                JOptionPane.DEFAULT_OPTION, JOptionPane.PLAIN_MESSAGE, null, buttons, buttons[2]);
 
         if (choice == 0) { //"Edit" was clicked
             if (askForDetails(movie, movie.getStatus())) {
                 refreshList(); //if the category changed, the movie moves out of this list
             }
+        } else if (choice == 1) {
+            int reply = JOptionPane.showConfirmDialog(this, "Remove " + movie.getTitle() + " from your list?", "Delete", JOptionPane.YES_NO_OPTION);
+            if (reply == JOptionPane.YES_OPTION) {
+                library.removeMovie(movie);
+                refreshList();
+            }
         }
     }
     
+    //ADD JAVADOC
     private void setupAutocomplete() {
         suggestionList.setFocusable(false); //so the popup never steals focus from the text field
         suggestionPopup.setFocusable(false);
@@ -261,7 +321,7 @@ public class AppUI extends javax.swing.JFrame {
         });
 
         //update suggestions on every keystroke
-        jTextField1.getDocument().addDocumentListener(new DocumentListener() {
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 updateSuggestions();
@@ -278,7 +338,7 @@ public class AppUI extends javax.swing.JFrame {
         });
 
         //arrow keys move through the suggestions, escape closes them
-        jTextField1.addKeyListener(new KeyAdapter() {
+        searchField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
                 if (!suggestionPopup.isVisible()) {
@@ -310,10 +370,10 @@ public class AppUI extends javax.swing.JFrame {
             }
         });
 
-        jTextField1.addFocusListener(new FocusAdapter() {
+        searchField.addFocusListener(new FocusAdapter() {
             @Override
             public void focusGained(FocusEvent e) {
-                jTextField1.selectAll(); //so typing replaces the "Title here" text
+                searchField.selectAll(); //so typing replaces the "Title here" text
             }
 
             @Override
@@ -327,43 +387,23 @@ public class AppUI extends javax.swing.JFrame {
         if (fillingText) {
             return;
         }
-        String query = jTextField1.getText().trim().toLowerCase();
-        if (query.length() < 2) {
-            suggestionPopup.setVisible(false);
-            return;
-        }
-
-        //score every title, lower score = better match, -1 = no match
-        HashMap<Movie, Integer> scores = new HashMap<>();
-        ArrayList<Movie> matches = new ArrayList<>();
-        for (Movie m : movieDatabase) {
-            int score = matchScore(m.getTitle().toLowerCase(), query);
-            if (score >= 0) {
-                scores.put(m, score);
-                matches.add(m);
-            }
-        }
-
-        //best score first, and if equal then the higher rated movie first
-        matches.sort((a, b) -> {
-            int byScore = Integer.compare(scores.get(a), scores.get(b));
-            return byScore != 0 ? byScore : Double.compare(b.getRating(), a.getRating());
-        });
-
+        
+        List<Movie> results = movieSearch.search(searchField.getText(), MAX_SUGGESTIONS);
+        
         suggestionModel.clear();
-        for (int i = 0; i < Math.min(6, matches.size()); i++) {
-            suggestionModel.addElement(matches.get(i));
+        for(Movie m : results) {
+            suggestionModel.addElement(m);
         }
-
+        
         if (suggestionModel.isEmpty()) {
             suggestionPopup.setVisible(false);
             return;
         }
-        suggestionList.setFixedCellWidth(Math.max(jTextField1.getWidth(), 260));
+        suggestionList.setFixedCellWidth(Math.max(searchField.getWidth(), MIN_POPUP_WIDTH));
         if (suggestionPopup.isVisible()) {
             suggestionPopup.pack(); //resize for the new number of rows
         } else {
-            suggestionPopup.show(jTextField1, 0, jTextField1.getHeight());
+            suggestionPopup.show(searchField, 0, searchField.getHeight());
         }
     }
 
@@ -372,68 +412,10 @@ public class AppUI extends javax.swing.JFrame {
         suggestionPopup.setVisible(false);
         if (chosen != null) {
             fillingText = true;
-            jTextField1.setText(chosen.getTitle());
+            searchField.setText(chosen.getTitle());
             fillingText = false;
         }
-        jTextField1.requestFocusInWindow();
-    }
-
-    //0 = title starts with the query, 1 = a word in the title starts with it, 2 = title contains it,
-    //3+ = close but with typos, -1 = no match
-    private int matchScore(String title, String query) {
-        if (title.startsWith(query)) {
-            return 0;
-        }
-        for (int s = 1; s < title.length(); s++) {
-            if (title.charAt(s - 1) == ' ' && title.startsWith(query, s)) {
-                return 1;
-            }
-        }
-        if (title.contains(query)) {
-            return 2;
-        }
-
-        //how many typos we allow depends on how much was typed
-        int maxTypos = query.length() <= 3 ? 0 : (query.length() <= 6 ? 1 : 2);
-        if (maxTypos == 0) {
-            return -1;
-        }
-
-        //compare the query to the start of the title and the start of every word,
-        //using chunks about as long as the query
-        int best = Integer.MAX_VALUE;
-        for (int s = 0; s < title.length(); s++) {
-            if (s != 0 && title.charAt(s - 1) != ' ') {
-                continue;
-            }
-            for (int len = query.length() - 1; len <= query.length() + 1; len++) {
-                if (len > 0 && s + len <= title.length()) {
-                    best = Math.min(best, editDistance(query, title.substring(s, s + len)));
-                }
-            }
-        }
-        return best <= maxTypos ? 3 + best : -1;
-    }
-
-    //number of single-letter changes (add, remove, replace, swap two neighbours) to turn a into b
-    private int editDistance(String a, String b) {
-        int[][] d = new int[a.length() + 1][b.length() + 1];
-        for (int i = 0; i <= a.length(); i++) {
-            d[i][0] = i;
-        }
-        for (int j = 0; j <= b.length(); j++) {
-            d[0][j] = j;
-        }
-        for (int i = 1; i <= a.length(); i++) {
-            for (int j = 1; j <= b.length(); j++) {
-                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
-                d[i][j] = Math.min(Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1), d[i - 1][j - 1] + cost);
-                if (i > 1 && j > 1 && a.charAt(i - 1) == b.charAt(j - 2) && a.charAt(i - 2) == b.charAt(j - 1)) {
-                    d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1); //swapped letters like "lr" vs "rl"
-                }
-            }
-        }
-        return d[a.length()][b.length()];
+        searchField.requestFocusInWindow();
     }
 
     /**
@@ -446,17 +428,20 @@ public class AppUI extends javax.swing.JFrame {
     // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
     private void initComponents() {
 
-        jScrollPane1 = new javax.swing.JScrollPane();
-        jTextField1 = new javax.swing.JTextField();
-        jButton1 = new javax.swing.JButton();
+        movieScrollPane = new javax.swing.JScrollPane();
+        searchField = new javax.swing.JTextField();
+        addButton = new javax.swing.JButton();
+        saveButton = new javax.swing.JButton();
 
         setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
-        jTextField1.setText("Title here");
-        jTextField1.addActionListener(this::jTextField1ActionPerformed);
+        searchField.addActionListener(this::searchFieldActionPerformed);
 
-        jButton1.setText("Add");
-        jButton1.addActionListener(this::jButton1ActionPerformed);
+        addButton.setText("ADD");
+        addButton.addActionListener(this::addButtonActionPerformed);
+
+        saveButton.setText("SAVE");
+        saveButton.addActionListener(this::saveButtonActionPerformed);
 
         javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
         getContentPane().setLayout(layout);
@@ -465,11 +450,13 @@ public class AppUI extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                    .addComponent(jScrollPane1)
+                    .addComponent(movieScrollPane)
                     .addGroup(layout.createSequentialGroup()
-                        .addComponent(jTextField1, javax.swing.GroupLayout.PREFERRED_SIZE, 170, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(searchField, javax.swing.GroupLayout.PREFERRED_SIZE, 170, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                        .addComponent(jButton1, javax.swing.GroupLayout.DEFAULT_SIZE, 92, Short.MAX_VALUE)))
+                        .addComponent(addButton, javax.swing.GroupLayout.PREFERRED_SIZE, 135, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                        .addComponent(saveButton, javax.swing.GroupLayout.DEFAULT_SIZE, 135, Short.MAX_VALUE)))
                 .addContainerGap())
         );
         layout.setVerticalGroup(
@@ -477,56 +464,38 @@ public class AppUI extends javax.swing.JFrame {
             .addGroup(layout.createSequentialGroup()
                 .addContainerGap()
                 .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                    .addComponent(jTextField1)
-                    .addComponent(jButton1, javax.swing.GroupLayout.DEFAULT_SIZE, 32, Short.MAX_VALUE))
-                .addGap(18, 18, 18)
-                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 319, Short.MAX_VALUE)
+                    .addComponent(searchField)
+                    .addComponent(addButton, javax.swing.GroupLayout.DEFAULT_SIZE, 32, Short.MAX_VALUE)
+                    .addComponent(saveButton, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                .addComponent(movieScrollPane, javax.swing.GroupLayout.DEFAULT_SIZE, 325, Short.MAX_VALUE)
                 .addContainerGap())
         );
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
 
-    private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jButton1ActionPerformed
+    private void addButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_addButtonActionPerformed
         addMovie();
-    }//GEN-LAST:event_jButton1ActionPerformed
+    }//GEN-LAST:event_addButtonActionPerformed
 
-    private void jTextField1ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField1ActionPerformed
+    private void searchFieldActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_searchFieldActionPerformed
         if (suggestionPopup.isVisible() && suggestionList.getSelectedIndex() >= 0) {
             acceptSuggestion(); //enter on a highlighted suggestion fills the box
         } else {
             suggestionPopup.setVisible(false);
             addMovie();
         }
-    }//GEN-LAST:event_jTextField1ActionPerformed
+    }//GEN-LAST:event_searchFieldActionPerformed
 
-    /**
-     * @param args the command line arguments
-     */
-    public static void main(String args[]) {
-        /* Set the Nimbus look and feel */
-        //<editor-fold defaultstate="collapsed" desc=" Look and feel setting code (optional) ">
-        /* If Nimbus (introduced in Java SE 6) is not available, stay with the default look and feel.
-         * For details see http://download.oracle.com/javase/tutorial/uiswing/lookandfeel/plaf.html 
-         */
-        try {
-            for (javax.swing.UIManager.LookAndFeelInfo info : javax.swing.UIManager.getInstalledLookAndFeels()) {
-                if ("Nimbus".equals(info.getName())) {
-                    javax.swing.UIManager.setLookAndFeel(info.getClassName());
-                    break;
-                }
-            }
-        } catch (ReflectiveOperationException | javax.swing.UnsupportedLookAndFeelException ex) {
-            logger.log(java.util.logging.Level.SEVERE, null, ex);
-        }
-        //</editor-fold>
-
-        /* Create and display the form */
-    }
+    private void saveButtonActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_saveButtonActionPerformed
+        saveMovies();
+    }//GEN-LAST:event_saveButtonActionPerformed
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
-    private javax.swing.JButton jButton1;
-    private javax.swing.JScrollPane jScrollPane1;
-    private javax.swing.JTextField jTextField1;
+    private javax.swing.JButton addButton;
+    private javax.swing.JScrollPane movieScrollPane;
+    private javax.swing.JButton saveButton;
+    private javax.swing.JTextField searchField;
     // End of variables declaration//GEN-END:variables
 }

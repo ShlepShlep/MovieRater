@@ -9,15 +9,22 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.JsonNode;
 
 /**
- *
+ * This class handles everything related to the internet,API and its request/response 
  * @author agnes
  */
 public class APIclient {
-    private static String apiKey = "80af13f9"; //api key
+    private static String apiKey = "80af13f9";
     private static String urlBase = "https://www.omdbapi.com/?apikey=";
     private HttpClient client = HttpClient.newHttpClient(); //talks to the internet so i can use request and response
     private ObjectMapper objectMapper = new ObjectMapper(); //changes json to object and vice versa
     
+    /**
+     * This method creates the request for the API, sends it, waits for a response and returns the response as a JSON
+     * Because of this method, which waits for the response, a SwingWorker is needed
+     * 
+     * @param imdbId unique ID of movies, to get the right movies info
+     * @return JSON for the movie, containing all necessary information
+     */
     public JsonNode getMovieJson (String imdbId) {
         try {
             String fullUrl = urlBase + apiKey + "&i=" + imdbId;
@@ -42,6 +49,12 @@ public class APIclient {
         }
     }
     
+    /**
+     * This method goes to the specified path in the JSON that contains the link for the poster image and returns it
+     * 
+     * @param imdbId unique ID of movies, to use as a parameter in getMovieJson
+     * @return image URL as a String
+     */
     public String getPosterUrl(String imdbId) {
         JsonNode movie = getMovieJson(imdbId);
         
