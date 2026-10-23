@@ -4,7 +4,12 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.HashMap;
 
-//ADD JAVADOC
+/**
+ * This class finds movie titles that match a search text, including ones with small
+ * typos. Used for the autocomplete suggestions in the search bar.
+ * 
+ * @author amelia
+ */
 public class MovieSearch {
     private final Movie[] movieDatabase;
     
@@ -12,7 +17,14 @@ public class MovieSearch {
         this.movieDatabase = movieDatabase;
     }
     
-    //ADD JAVADOC
+    /**
+     * This method returns the best matching movies for a search text, best match first.
+     * Equally good matches are ordered by their rating, highest first.
+     *
+     * @param query      the text typed by the user (at least 2 characters, otherwise nothing is returned)
+     * @param maxResults the maximum number of movies to return
+     * @return the matching movies, or an empty list if there are none
+     */
     public List<Movie> search(String query, int maxResults) {
         query = query.trim().toLowerCase();
         
@@ -44,9 +56,17 @@ public class MovieSearch {
         return results;
     } 
     
-    //ADD JAVADOC
-    //0 = title starts with the query, 1 = a word in the title starts with it, 2 = title contains it,
-    //3+ = close but with typos, -1 = no match
+    /**
+     * This method assigns a score to how well a title matches the query, where a lower score is better.
+     * 0 means the title starts with the query, 1 means a word in the title does,
+     * 2 means the title contains it, and 3 or more means a close match with
+     * typos (the more typos, the higher the score). The number of typos allowed
+     * grows with the length of the query.
+     *
+     * @param title the movie title, in lowercase
+     * @param query the search text, in lowercase
+     * @return the score, or -1 if the title doesn't match
+     */
     private int matchScore(String title, String query) {
         if (title.startsWith(query)) {
             return 0;
@@ -82,8 +102,14 @@ public class MovieSearch {
         return best <= maxTypos ? 3 + best : -1;
     }
     
-    //ADD JAVADOC
-    //number of single-letter changes (add, remove, replace, swap two neighbours) to turn a into b
+    /**
+     * This method counts the fewest single-letter changes needed to turn one text into the other.
+     * Adding, removing or replacing a letter counts as one change, and so does swapping two neighbouring letters.
+     *
+     * @param a the first text ("source")
+     * @param b the second text ("target")
+     * @return the number of changes
+     */
     private int editDistance(String a, String b) {
         int[][] d = new int[a.length() + 1][b.length() + 1];
         for (int i = 0; i <= a.length(); i++) {

@@ -96,4 +96,3 @@ public class Movie {
         this.status = status;
     }
 }
-
